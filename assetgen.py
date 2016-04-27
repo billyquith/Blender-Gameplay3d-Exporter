@@ -13,6 +13,8 @@
 import os
 import bpy
 import subprocess
+import shutil
+import glob
 from mathutils import Vector
 from math import radians, degrees
 from .utils import cross_mkdir
@@ -23,19 +25,16 @@ class AssetGen:
     matpath = None
 
     def __init__(self, filepath):
-        self.filepath = cross_mkdir(filepath + "/gpb/")
-        self.temp = cross_mkdir(filepath + "/temp/")
-        self.matpath = cross_mkdir(filepath + "/materials/")
+        self.filepath = cross_mkdir(os.path.join(filepath, 'gpb'))
+        self.temp = cross_mkdir(os.path.join(filepath, 'temp'))
+        self.matpath = cross_mkdir(os.path.join(filepath, 'materials'))
 
     def clean_up(self):
-        flag = "rm -rf"
-        if os.name != 'posix':
-            flag = "rd /s /q"
-        os.system("{0} {1}".format(flag, self.temp))
+        shutil.rmtree(self.temp)
 
     def write(self, overrides, scene):
         try:
-            bpy.ops.export_scene.fbx(overrides, filepath=self.temp,
+            bpy.ops.export_scene.fbx(overrides, filepath = self.temp + '/',
                     axis_forward='Y',
                     axis_up='Z',
                     apply_unit_scale=False,
@@ -49,11 +48,12 @@ class AssetGen:
                     batch_mode='SCENE',
                     use_batch_own_dir=False)
         except:
-            self.report({'ERROR'}, "FBX exporter version it not compatible. Aborting exporting of assets.")
+            self.report({'ERROR'},
+                "FBX exporter version it not compatible. Aborting exporting of assets.")
             return
 
-        fbxfile = "{0}{1}.fbx".format(self.temp, scene.name)
-        gpbfile = "{0}{1}".format(self.filepath, scene.name)
+        fbxfile = os.path.join(self.temp, scene.name + '.fbx')
+        gpbfile = os.path.join(self.filepath, scene.name)
 
         # command to run encoder
         cmd = [ 'gameplay-encoder', '-v', '0', '-m' ]
@@ -67,15 +67,21 @@ class AssetGen:
         cmd += [ fbxfile, gpbfile ]
             
         try:
-            ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)        
+            ret = subprocess.run(cmd, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)        
             ret.check_returncode()
+            print(ret.stdout)
         except FileNotFoundError as err:
             print('Error: ', err)
-            print('There was a problem running the Gameplay encoder')
+            print(ret.stdout)
+            print('Is the Gameplay encoder in your path?')
+        except subprocess.CalledProcessError as err:
+            print('There was a problem running the Gameplay encoder.')
+            print(err)
         else:
-            # move material files
-            flag = "mv"
-            if os.name != "posix":
-                flag = "move /Y"
-            cmd = "{0} {1}*.material {2}".format(flag, self.filepath, self.matpath)
-            os.system(cmd)
+            # move material files            
+            for f in glob.glob(os.path.join(self.filepath, "*.material")):
+                targmat = os.path.join(self.matpath, os.path.basename(f))
+                if os.path.exists(targmat):
+                    os.remove(targmat)
+                shutil.move(f, self.matpath)
+                

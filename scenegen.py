@@ -23,7 +23,7 @@ class SceneGen:
     cameras = None
 
     def __init__(self, filepath):
-        self.filepath = cross_mkdir(filepath + "/scenes/")
+        self.filepath = cross_mkdir(os.path.join(filepath, "scenes"))
 
     def export(self, scene):
         self.str_scene = "scene {0} {{\n".format(scene.name)
@@ -44,7 +44,7 @@ class SceneGen:
                     self.str_scene += temp
 
         self.str_scene += "}\n"
-        scenefile = "{0}{1}.scene".format(self.filepath, scene.name)
+        scenefile = os.path.join(self.filepath, scene.name + ".scene")
         self.write(self.str_scene, scenefile)
 
     def to_prop(self, scene, tab_num, node):

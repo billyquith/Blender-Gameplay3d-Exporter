@@ -20,13 +20,12 @@ class HomeTab:
     bl_category = 'Gameplay3D'
 
 # return .00n
-def get_suffix(_name):
-    _suffix = re.search(r'\.(\d{3})$', _name)
-    return _suffix
+def get_suffix(name):
+    return os.path.splitext(name)[1]
 
 # return without .00n
-def no_suffix(_name):
-    return _name[:-4] if get_suffix(_name) else _name
+def no_suffix(name):
+    return os.path.splitext(name)[0]
 
 def make_names_unique(collection, item, attribute):
     attrib = getattr(item, attribute) # attribute to make unique
@@ -43,7 +42,7 @@ def make_names_unique(collection, item, attribute):
     setattr(item, attribute, name)
 
 def tabs(num):
-    return ''.join("\t" for i in range(num))
+    return '\t' * num
 
 def deci(n):
     return format(n, '.2f')
@@ -52,14 +51,10 @@ def armature_parent_or_none(obj):
     return obj.parent is None or obj.parent.type == 'ARMATURE'
 
 def cross_mkdir(filepath):
-    if os.name == 'posix':
-        os.system("mkdir -p {0}".format(filepath))
-    else:
-        filepath = filepath.replace('/','\\')
-        os.system("if not exist {0} mkdir {0}".format(filepath))
+    os.makedirs(filepath, exist_ok = True)
     return filepath
 
 class SimpleList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, 
-            active_propname, index):
+                  active_propname, index):
         layout.label(text=item.name)

@@ -19,7 +19,7 @@ class AnimGen:
     filepath = None
 
     def __init__(self, filepath):
-        self.filepath = cross_mkdir(filepath + "/animations/")
+        self.filepath = cross_mkdir(os.path.join(filepath, "animations"))
 
     def write(self, scene, node):
         if node.type == 'ARMATURE' and len(scene.gp3d_animations.groups) > 0:
@@ -39,7 +39,7 @@ class AnimGen:
             for lst, temp in zip(ctr_lists, temp_props):
                 temp.strips = [s for s in common_strips if s in lst]
                 
-            animfile = "{0}{1}.animation".format(self.filepath, scene.name)
+            animfile = os.path.join(self.filepath, scene.name + ".animation")
             agg = Aggregator()
             agg.process(temp_props)
             agg.write(scene.frame_end, node.animation_data.nla_tracks, animfile)
