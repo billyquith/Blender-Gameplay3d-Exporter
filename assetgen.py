@@ -12,6 +12,7 @@
 
 import os
 import bpy
+import subprocess
 from mathutils import Vector
 from math import radians, degrees
 from .utils import cross_mkdir
@@ -51,23 +52,30 @@ class AssetGen:
             self.report({'ERROR'}, "FBX exporter version it not compatible. Aborting exporting of assets.")
             return
 
-
         fbxfile = "{0}{1}.fbx".format(self.temp, scene.name)
         gpbfile = "{0}{1}".format(self.filepath, scene.name)
 
-        flag_animations = ""
+        # command to run encoder
+        cmd = [ 'gameplay-encoder', '-v', '0', '-m' ]
+        
         if len(scene.gp3d_animations.groups) > 0:
             for group in scene.gp3d_animations.groups:
-                flag_animations += "-g {0} {1} ".format(group.boneroot, group.anim_id)
+                cmd += [ "-g", group.boneroot, group.anim_id ]
         else:
-            flag_animations += "-g:auto"
-        cmd = "gameplay-encoder -v 0 -m {0} {1} {2}".format(flag_animations, 
-                fbxfile, gpbfile)
-        os.system(cmd)
+            cmd.append("-g:auto")
 
-        # move material files
-        flag = "mv"
-        if os.name != "posix":
-            flag = "move /Y"
-        cmd = "{0} {1}*.material {2}".format(flag, self.filepath, self.matpath)
-        os.system(cmd)
+        cmd += [ fbxfile, gpbfile ]
+            
+        try:
+            ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)        
+            ret.check_returncode()
+        except FileNotFoundError as err:
+            print('Error: ', err)
+            print('There was a problem running the Gameplay encoder')
+        else:
+            # move material files
+            flag = "mv"
+            if os.name != "posix":
+                flag = "move /Y"
+            cmd = "{0} {1}*.material {2}".format(flag, self.filepath, self.matpath)
+            os.system(cmd)
